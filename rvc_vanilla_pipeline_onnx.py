@@ -8,6 +8,7 @@ from fairseq import checkpoint_utils
 import librosa
 import argparse
 import numpy as np
+from scipy.io.wavfile import write
 
 def init_model(model_type):
     if model_type == 'rvc':
@@ -50,6 +51,37 @@ class RVCPipeline(nn.Module):
         self.pipeline = VocalConvertPipeline(32000, 'cpu', False, no_pad=True)
         self.model = init_model("rvc")
         self.hubert = load_hubert("rvc")
+
+        self.crossfade_overlap = 256
+        self.crossfade_offset_rate = 0.0
+        self.crossfade_end_rate = 1.0
+        self.generate_strength()
+
+    def generate_strength(self):
+        cf_offset = int(self.crossfade_overlap * self.crossfade_offset_rate)
+        cf_end = int(self.crossfade_overlap * self.crossfade_end_rate)
+        cf_range = cf_end - cf_offset
+        percent = np.arange(cf_range) / cf_range
+
+        np_prev_strength = np.cos(percent * 0.5 * np.pi) ** 2
+        np_cur_strength = np.cos((1 - percent) * 0.5 * np.pi) ** 2
+
+        self.np_prev_strength = np.concatenate(
+            [
+                np.ones(cf_offset),
+                np_prev_strength,
+                np.zeros(self.crossfade_overlap -
+                         cf_offset - len(np_prev_strength)),
+            ]
+        )
+        self.np_cur_strength = np.concatenate(
+            [
+                np.zeros(cf_offset),
+                np_cur_strength,
+                np.ones(self.crossfade_overlap -
+                        cf_offset - len(np_cur_strength)),
+            ]
+        )
 
     def clear_buffers(self):
         self.audio_buffer = None
@@ -117,7 +149,8 @@ class RVCPipeline(nn.Module):
                     0,
                     True
                 )
-        
+    def __call__ (self, x):
+        return self.forward(x)
 
 
 if __name__ == "__main__":
@@ -129,27 +162,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #self.conv_sr = 16000 in `compare_infer.py`
     conv_sr = 16000
-
+    sr_out = 32000
     model = RVCPipeline()
 
     input_audio, sr = librosa.load(args.fname, sr=conv_sr)
     print('LOG: input audio shape: ', input_audio.shape)
-    output_audio = model(input_audio)
+    output_audio = model(torch.Tensor(input_audio))
     print('LOG: output audio shape: ', output_audio.shape)
     postprocessed = model.postprocess(output_audio)
     print('LOG: postprocessed output audio shape: ', output_audio.shape)
-
+    write('output.wav', sr_out, postprocessed)
 
     torch.onnx.export(model,               # model being run
-                  input_audio,                         # model input (or a tuple for multiple inputs)
+                  torch.Tensor(input_audio),                         # model input (or a tuple for multiple inputs)
                   args.out_onnx,   # where to save the model (can be a file or file-like object)
                   export_params=True,        # store the trained parameter weights inside the model file
                   # opset_version=10,          # the ONNX version to export the model to
                   do_constant_folding=True,  # whether to execute constant folding for optimization
                   input_names = ['input'],   # the model's input names
                   output_names = ['output'], # the model's output names
-                  dynamic_axes={'input' : {2 : 'batch_size'},    # variable length axes
-                                'output' : {2 : 'batch_size'}}
+                  dynamic_axes={'input' : {1 : 'batch_size'},    # variable length axes
+                                'output' : {1 : 'batch_size'}}
                   )
 
     print(model)
