@@ -184,12 +184,13 @@ class ChunkedInferer:
                     None,
                     0,
                     0,
-                    True
+                    True  
                 )
             else:
                 mel_tgt = torch.zeros(1, 80, 64)
                 c = self.hubert.units(wav_src)
                 c = c.transpose(2, 1)
+                print('model input shape: ', c.shape)
                 audio = self.model.infer(c, mel=mel_tgt)
                 audio = audio.squeeze(0).squeeze(0).cpu().numpy()
                 audio = (audio * 32767).astype(np.int16)
