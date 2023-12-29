@@ -19,9 +19,9 @@ import torch
 from scipy.io.wavfile import read
 from torch.nn import functional as F
 
-from .shared import ROOT_DIR
+from shared import ROOT_DIR
 
-from .config import TrainConfig
+from config import TrainConfig
 
 matplotlib.use("Agg")
 #logging.getLogger("matplotlib").setLevel(logging.ERROR)

@@ -13,12 +13,12 @@ from fairseq import checkpoint_utils
 from fairseq.models.hubert.hubert import HubertModel
 from pydub import AudioSegment
 
-from .models import (SynthesizerTrnMs256NSFSid, SynthesizerTrnMs256NSFSidNono)
-from .pipeline import VocalConvertPipeline
+from models import (SynthesizerTrnMs256NSFSid, SynthesizerTrnMs256NSFSidNono)
+from pipeline import VocalConvertPipeline
 
-from .cmd_opts import opts
-from .shared import ROOT_DIR, device, is_half
-from .utils import load_audio
+from cmd_opts import opts
+from shared import ROOT_DIR, device, is_half
+from utils import load_audio
 
 AUDIO_OUT_DIR = opts.output_dir or os.path.join(ROOT_DIR, "outputs")
 
@@ -190,24 +190,6 @@ class VoiceConvertModel:
             channels=1,
         )
         return audio
-        # os.makedirs(output_dir, exist_ok=True)
-        # input_audio_splitext = os.path.splitext(os.path.basename(input_audio))[0]
-        # model_splitext = os.path.splitext(self.model_name)[0]
-        # index = 0
-        # existing_files = os.listdir(output_dir)
-        # for existing_file in existing_files:
-        #     result = re.match(r"\d+", existing_file)
-        #     if result:
-        #         prefix_num = int(result.group(0))
-        #         if index < prefix_num:
-        #             index = prefix_num
-        # audio.export(
-        #     os.path.join(
-        #         output_dir, f"{index+1}-{model_splitext}-{input_audio_splitext}.wav"
-        #     ),
-        #     format="wav",
-        # )
-        # return audio_opt
 
     def get_index_path(self, speaker_id: int):
         basename = os.path.splitext(self.model_name)[0]

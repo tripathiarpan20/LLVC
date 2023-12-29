@@ -19,8 +19,8 @@ import torchcrepe
 from fairseq.models.hubert import HubertModel
 from torch import Tensor
 
-from .models import SynthesizerTrnMs256NSFSid
-from .rmvpe import RMVPE
+from models import SynthesizerTrnMs256NSFSid
+from rmvpe import RMVPE
 
 
 class VocalConvertPipeline(object):

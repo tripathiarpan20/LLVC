@@ -13,8 +13,8 @@ from torch.nn import Conv1d, Conv2d, ConvTranspose1d
 from torch.nn import functional as F
 from torch.nn.utils import remove_weight_norm, spectral_norm, weight_norm
 
-from . import attentions, commons, modules
-from .commons import get_padding, init_weights
+import attentions, commons, modules
+from commons import get_padding, init_weights
 
 
 class TextEncoder(nn.Module):

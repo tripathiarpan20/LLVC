@@ -1,3 +1,38 @@
+# minimal-rvc ONNX support LLVC
+The LLVC repo provides a sleek minimal implementation of the RVC (Realtime Voice Conversion) v2 model, that can perform 10x realtime on a Colab Tesla T4, but 10x slower than realtime on Colab CPU.
+This fork aims to extend the same for ONNX support to squeeze more performance out of it
+
+## Setup
+Tested on Ubuntu 22.04 WSL 2:
+```
+git clone https://github.com/tripathiarpan20/LLVC/tree/main
+cd LLVC
+virtualenv llvcenv
+source llvcenv/bin/activate
+pip install -r requirements.txt #Takes a while to complete
+python download_models.py
+
+#Dealing with some bs with ffmpeg: https://github.com/kkroening/ffmpeg-python/issues/174
+sudo apt-get update
+sudo apt-get install ffmpeg
+pip uninstall ffmpeg 
+pip uninstall ffmpeg-python
+pip install ffmpeg-python
+
+# Download any `.pth` model file tagged with 'RVC v2' from https://www.weights.gg/
+# Paste the `model.pth` RVC v2 file downloaded in last step into the current folder (`LLVC`)
+
+# Paste a sample input audio `.wav` file into the current folder (`LLVC`)
+```
+
+## Vanilla Inference
+`python minimal_rvc/_infer_file.py --input_file libri_sample.wav --out_dir matpat_out --model_path model.pth`
+
+The above command would process `libri_sample.wav` with the RVC v2 model (`model.pth`) and create an `out.wav` file in the `matpat_out` folder
+
+## ONNX export
+
+
 # LLVC: **L**ow-Latency **L**ow-Resource **V**oice **C**onversion
 This repository contains the code necessary to train Koe AI's LLVC models and to reproduce the LLVC paper.
 

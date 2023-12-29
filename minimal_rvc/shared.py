@@ -9,7 +9,7 @@ import sys
 
 import torch
 
-from .cmd_opts import opts
+from cmd_opts import opts
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(ROOT_DIR, "llvc_models", "models")
