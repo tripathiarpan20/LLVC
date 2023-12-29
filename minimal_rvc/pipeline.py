@@ -19,8 +19,6 @@ import torchcrepe
 from fairseq.models.hubert import HubertModel
 from torch import Tensor
 
-from scipy import signal
-import traceback
 from .models import SynthesizerTrnMs256NSFSid
 from .rmvpe import RMVPE
 
@@ -237,14 +235,14 @@ class VocalConvertPipeline(object):
         embedding_output_layer: int,
         net_g: SynthesizerTrnMs256NSFSid,
         sid: int,
-        audio: torch.Tensor,
+        audio: np.ndarray,
         pitch: np.ndarray,
         pitchf: np.ndarray,
         index: faiss.IndexIVFFlat,
         big_npy: np.ndarray,
         index_rate: float,
     ):
-        feats = audio
+        feats = torch.from_numpy(audio)
         if self.is_half:
             feats = feats.half()
         else:
@@ -352,34 +350,31 @@ class VocalConvertPipeline(object):
         return audio1
 
     def __call__(
-            self,
-            model: HubertModel,
-            embedding_output_layer: int,
-            net_g: SynthesizerTrnMs256NSFSid,
-            sid: int,
-            audio: torch.Tensor,  # Change the type to torch.Tensor
-            transpose: int,
-            f0_method: str,
-            file_index: str,
-            index_rate: float,
-            if_f0: bool,
-            f0_relative: bool,
-            f0_file: str = None,
-        ):
+        self,
+        model: HubertModel,
+        embedding_output_layer: int,
+        net_g: SynthesizerTrnMs256NSFSid,
+        sid: int,
+        audio: np.ndarray,
+        transpose: int,
+        f0_method: str,
+        file_index: str,
+        index_rate: float,
+        if_f0: bool,
+        f0_relative: bool,
+        f0_file: str = None,
+    ):
 
         index = big_npy = None
 
         bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
-        
-        # Make a copy of the array to ensure it's contiguous
-        audio_np = audio.numpy().copy()
-        
-        audio = torch.from_numpy(signal.filtfilt(bh, ah, audio_np).copy())
+        audio = signal.filtfilt(bh, ah, audio)
 
-        audio_pad = torch.nn.functional.pad(audio, (self.window // 2, self.window // 2))
+        audio_pad = np.pad(
+            audio, (self.window // 2, self.window // 2), mode="reflect")
         opt_ts = []
         if audio_pad.shape[0] > self.t_max:
-            audio_sum = torch.zeros_like(audio)
+            audio_sum = np.zeros_like(audio)
             for i in range(self.window):
                 audio_sum += audio_pad[i: i - self.window]
             for t in range(self.t_center, audio.shape[0], self.t_center):
@@ -392,7 +387,7 @@ class VocalConvertPipeline(object):
                     )[0][0]
                 )
 
-        audio_pad = torch.nn.functional.pad(audio, (self.t_pad, self.t_pad))
+        audio_pad = np.pad(audio, (self.t_pad, self.t_pad), mode="reflect")
         p_len = audio_pad.shape[0] // self.window
         inp_f0 = None
         if hasattr(f0_file, "name"):
@@ -434,9 +429,9 @@ class VocalConvertPipeline(object):
                         sid,
                         audio_pad[s: t + self.t_pad2 + self.window],
                         pitch[:, s //
-                            self.window: (t + self.t_pad2) // self.window],
+                              self.window: (t + self.t_pad2) // self.window],
                         pitchf[:, s //
-                            self.window: (t + self.t_pad2) // self.window],
+                               self.window: (t + self.t_pad2) // self.window],
                         index,
                         big_npy,
                         index_rate,
@@ -489,8 +484,7 @@ class VocalConvertPipeline(object):
             audio_opt.append(
                 result[self.t_pad_tgt: result.shape[-1] - self.t_pad_tgt]
             )
-        # print('LOG: audio_opt shape: ', audio_opt.shape)
-        audio_opt = torch.cat([torch.from_numpy(item) for item in audio_opt])
+        audio_opt = np.concatenate(audio_opt)
         del pitch, pitchf, sid
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
